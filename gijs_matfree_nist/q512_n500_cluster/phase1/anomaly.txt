@@ -1,0 +1,4 @@
+status=ANOMALY
+n_pairs=124 n_pure=376 n_orphans=1 n_oversized=0 n_all_zero=376 expected_pure=375 excess=1
+orphan column 394 (flagged 23 times, no column shares its pattern)
+all-zero excess: 376 all-zero columns vs 375 expected unpaired (n-w); excess 1 (positive excess with orphans present signals degenerate pairs; positive excess without orphans signals invisible pairs contaminating the pure set)

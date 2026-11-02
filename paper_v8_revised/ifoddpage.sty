@@ -1,0 +1,8 @@
+% Minimal ifoddpage.sty stub for algorithm2e compatibility
+% Provides \checkoddpage and \ifoddpage as no-ops
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{ifoddpage}[2016/04/23 v1.0 stub]
+\newif\ifoddpage
+\oddpagefalse
+\newcommand{\checkoddpage}{\oddpagefalse}
+\endinput

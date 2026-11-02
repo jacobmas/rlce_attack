@@ -1,0 +1,217 @@
+\section{The GIJS Distinguisher In the Our Context}\label{sec:gijs}
+In this section we analyze the performance of the GIJS
+distinguisher~\cite{GIJS26} in our attack algorithms.
+
+We now show that under plausible and empirically validated heuristics, the GIJS
+distinguisher algorithms succeeds in distinguishing
+clean columns (shortened from a pure GRS column) from dirty columns (one of two
+elements of a twin pair, both of which appear in the shortened code) under
+certain
+conditions even with noisy RLCE columns.
+
+The shortened clean columns lie on a projected
+rational curve
+\[
+    \varphi : \mathbf{P}^1 \longrightarrow \mathbf{P}^{k'-1},
+\]
+of degree $D=k'+w-1$, given by homogeneous polynomials of degree $D$ in the
+decoding
+parameter $t$. Below, we work over the algebraic closure
+$\overline{\mathbf{F}}_q$ when counting roots.
+
+Each original column has a distinct evaluation parameter
+$\alpha \in \mathbf{F}_q$, and this distinct parameter is unchanged by
+shortening.
+
+Fix a holdout column and let $I$ be the set of interpolation
+columns, $|I| = n'-1$. Partition $I$ as follows:
+\begin{itemize}
+    \item \emph{Clean points:} kept pure columns and singleton-hit
+          survivors. Each lies on the curve $\varphi(\mathbf{P}^1)$,
+          at the parameter of its original column. Let $\mathcal{C}$
+          denote this set, and $C = |\mathcal{C}|$.
+    \item \emph{Dirty points:} kept columns belonging to a pair both
+          of whose members are kept. Such a pair is called
+          \emph{both-kept}. Let $\mathcal{U}$ denote the set of
+          non-degenerate both-kept pairs, and $U = |\mathcal{U}|$.
+          Non-degenerate means that neither mixing coefficient is zero,
+          so neither member of the pair is itself a curve point; in the
+          RLCE specification the mixing coefficients are chosen to always
+          be non-degenerate.
+\end{itemize}
+Thus, counting kept columns, $n' = C + 2U$ plus any degenerate
+both-kept pairs, which we exclude from $\mathcal{U}$ and treat
+separately; in the ID-0 run below there are none.
+
+Let $H$ be a homogeneous polynomial of degree $d$ in $k'$
+variables. We say $H$ \emph{vanishes to order $s$} at a point
+$x$ if all partial derivatives of $H$ of order $< s$ vanish at $x$,
+i.e.\ the jet of $H$ at $x$ of order $s-1$ is zero. The GIJS
+kernel, for a fixed interpolation set, is the space of such $H$
+vanishing to order $s$ at every point of $I$. A clean holdout
+$\tau$ is accepted, i.e.\ not flagged, if every $H$ in the kernel
+vanishes at $\tau$; it is flagged if some $H$ in the kernel does
+not vanish at $\tau$.
+
+\subsection{PIR persistence: rigorous acceptance with
+    noise}\label{sec:pir-noise}
+
+First, we show that the pairs of dirty columns (which are the only type of
+non-clean columns present in the shortened code)
+are actually useful to the GIJS attack. As we will show, the reason is
+precisely due to the linear relation existing between pairs that results in
+a pure GRS column when inverting the $A$ map from public key generation.
+
+\begin{theorem}[PIR persistence]
+    Let $H$ be a homogeneous polynomial of degree $d$ vanishing to
+    order $s$ at every interpolation point, and assume
+    \begin{equation}
+        2s > d.
+        \label{eq:line}
+    \end{equation}
+    Then $H$ vanishes identically on the line through the two dirty
+    columns of every non-degenerate both-kept pair, and in particular
+    $H$ vanishes at the underlying GRS point of that pair.
+    Consequently, if
+    \begin{equation}
+        sC + U > dD,
+        \label{eq:condition}
+    \end{equation}
+    then $H$ vanishes identically on the curve $\varphi(\mathbf{P}^1)$.
+
+    As a result, it vanishes at every clean holdout column, meaning that
+    running
+    the
+    GIJS distinguisher with a clean holdout column outputs "GRS"
+    deterministically
+    if the above conditions are fulfilled.
+\end{theorem}
+
+\begin{proof}
+    Fix a non-degenerate both-kept pair with underlying GRS point
+    $P$ and random point $R$. After shortening, its two columns are
+    \[
+        Q_1 = aP + cR, \qquad Q_2 = bP + dR,
+    \]
+    in projective coordinates, with $ad - bc \ne 0$ and $c, d \ne 0$
+    by non-degeneracy. Hence $Q_1 \ne Q_2$ in $\mathbf{P}^{k'-1}$,
+    and $Q_1, Q_2, P$ are collinear on the line $L$ spanned by $P$
+    and $R$; $L$ is not contained in the curve, since $R$ is not a
+    curve point.
+
+    Restrict $H$ to $L$. The restriction is a binary form of degree
+    $d$ on $L$, vanishing to order $s$ at the two distinct points
+    $Q_1$ and $Q_2$. A binary form of degree $d$ with two distinct
+    roots of multiplicity $s$ each is identically zero as soon as
+    $2s > d$, by degree counting. This is~\eqref{eq:line}. Hence
+    $H$ vanishes identically on $L$, and in particular $H(P) = 0$.
+
+    Now consider the pullback $h(t) = H(\varphi(t))$. This is a binary
+    form of degree $dD$, unless it is identically zero, which is the
+    conclusion we want. We count its roots over
+    $\overline{\mathbf{F}}_q$, with multiplicity.
+
+    First, let $t_0$ be the parameter of a clean interpolation point
+    $X = \varphi(t_0)$. Since $H$ vanishes to order $s$ at $X$ in
+    ambient space, its Taylor expansion at $X$ has no terms of degree
+    $< s$. Composing with $\varphi(t) - X$, which has zero constant
+    term at $t_0$, gives a power series in $t - t_0$ with no terms of
+    degree $< s$; if $\varphi$ is ramified at $t_0$, the order is only
+    larger. Hence $h$ vanishes to order at least $s$ at $t_0$.
+
+    Second, let $t_i$ be the parameter of the underlying GRS point
+    $P_i$ of a non-degenerate both-kept pair. By the line argument
+    above, $H(P_i) = 0$, so $h(t_i) = 0$, i.e.\ $h$ has a root at
+    $t_i$ of order at least $1$. The parameters $t_i$ are distinct
+    across pairs, since the original evaluation parameters are
+    distinct, and they are distinct from the clean parameters, since
+    a both-kept pair's parameter is not the parameter of any clean
+    interpolation column. Hence the roots counted in the first and
+    second steps are distinct, except that a clean root already
+    carries multiplicity $s$.
+
+    Therefore $h$ has total root multiplicity at least $sC + U$.
+    If \eqref{eq:condition} holds, this exceeds the degree $dD$ of
+    $h$, so $h$ cannot be a nonzero binary form. Hence $h \equiv 0$,
+    i.e.\ $H$ vanishes at every point of the curve
+    $\varphi(\mathbf{P}^1)$. A clean holdout column is a curve
+    point, so every kernel polynomial $H$ vanishes at it, and the
+    GIJS test accepts it.
+\end{proof}
+
+\subsection{Random Holdout Columns}\label{sec:rand-holdout}
+We now show that with high probability (and heuristically with overwhelming
+probability) that a random and independent column
+will be flagged by the GIJS distinguisher, meaning that at least one kernel
+polynomial $H$ will not vanish at it.
+
+\begin{theorem}[Independent uniform random holdout]
+    Fix the interpolation set $I$, and let $K$ be its GIJS kernel
+    as above. Assume $K \ne \{0\}$. Let $\tau$ be uniform in
+    $\mathbf{F}_q^{k'}$, independent of $I$ and hence independent
+    of $K$. Then
+    \begin{equation}
+        \Pr[\tau \text{ is flagged}] \ge 1 - \frac{d}{q}.
+        \label{eq:bound}
+    \end{equation}
+\end{theorem}
+
+\begin{proof}
+    Since $K \ne \{0\}$, pick any nonzero $H_0 \in K$. The flagging
+    event contains the event $\{H_0(\tau) \ne 0\}$, because if
+    $H_0$ does not vanish at $\tau$, the GIJS test has a witness
+    and flags $\tau$. Hence
+    \[
+        \Pr[\tau \text{ is flagged}]
+        \ge \Pr[H_0(\tau) \ne 0]
+        = 1 - \Pr[H_0(\tau) = 0].
+    \]
+    It remains to bound $\Pr[H_0(\tau) = 0]$. This is the
+    Schwartz--Zippel bound: a nonzero polynomial of total degree
+    $d$ in $k'$ variables over $\mathbf{F}_q$ vanishes at at most
+    a $d/q$ fraction of points in $\mathbf{F}_q^{k'}$. Indeed, the
+    bound follows by induction on $k'$, writing $H_0$ as a
+    polynomial in one variable with coefficients in the remaining
+    variables; a univariate polynomial of degree at most $d$ has at
+    most $d$ roots unless it is identically zero. Applying it to
+    $H_0$ gives $\Pr[H_0(\tau) = 0] \le d/q$, and
+    \eqref{eq:bound} follows.
+\end{proof}
+
+\subsubsection{Non-zero Kernel Conditions}\label{sec:nonzero-kernel}
+It remains to discuss conditions on which the kernel is non-zero. 
+
+Let $J=\binom{k'+s-1}{s-1}$ be the number of jet conditions, and 
+$N_d=\binom{k'+d-1}{d}$ the number of monomials of degree $d$ in $k'$ variables.
+
+\begin{corollary}[Sufficient condition for a nonzero kernel]
+    If
+    \begin{equation}
+        (n'-1)J < N_d,
+        \label{eq:kernel}
+    \end{equation}
+    then $K \ne \{0\}$ for every interpolation set, and hence
+    \eqref{eq:bound} holds for every trial.
+\end{corollary}
+
+\begin{proof}
+    $K$ is the kernel of an $(n'-1)J \times N_d$ matrix. Its rank
+    is at most the number of rows, $(n'-1)J$. By rank--nullity,
+    \[
+        \dim K \ge N_d - (n'-1)J > 0
+    \]
+    under \eqref{eq:kernel}, so $K \ne \{0\}$. Theorem~3 then
+    applies.
+\end{proof}
+
+
+\subsubsection{Heuristic Bounds on Dirty Columns}\label{sec:heuristic}
+
+As our experiments (see below) show, we have not had \emph{any} dirty columns 
+fail to flag (i.e. the GIJS distinguisher outputs "GRS" when they are a holdout column). 
+
+Under a reasonable heuristic and using the $N_d - (n'-1)J$ lower bound for the kernel dimension, it seems 
+reasonable to assume that the probability of failure in practice is more on the order of $(d/q)^{\dim K}$, 
+meaning the probability is essentially independent across kernel polynomials. We stress
+that this is a pure heuristic, but that it has been experimentally shown to be reasonable on 
+parameter sets up to the lowest set given in the RLCE specification. 

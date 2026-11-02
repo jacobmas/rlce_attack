@@ -1,0 +1,231 @@
+
+
+
+
+\section{Phase 1}\label{sec:phase1}
+Here we describe the first phase of the attack, which uses random code shortenings and the GIJS distinguisher to 
+recover and unmix all the noisy pairs. Given the $k \times (n+w)$ RLCE public matrix, we proceed as follows.
+Let $(n', k', s, d, D, q)$ be GIJS parameters
+satisfying the kernel inequality
+$(n'-1)\binom{k'+s-1}{s-1} < \binom{k'+d-1}{d}$. Here, $D = k'+w$ is the degree
+of the hidden rational curve.
+
+\subsection{Choosing the GIJS parameters}\label{sec:param-choice}
+
+Given the RLCE parameters $(n, k, w, q)$ with public-key length $N = n + w$,
+the attacker first fixes a target shortened length $n'$. Shortening at
+$N - n'$ positions drops the dimension by the same amount, so
+\[
+    k' = k - (N - n').
+\]
+After shortening, the hidden ambient GRS code has dimension $K = k' + w$, so the
+hidden rational curve has degree
+\[
+    D = K - 1 = k' + w - 1.
+\]
+It remains to choose the jet multiplicity $s$ and the test-polynomial degree
+$d$. We search over small integer pairs with $1 \le s \le d < q$ satisfying
+both GIJS feasibility inequalities:
+\begin{enumerate}
+    \item \emph{Reconstruction:} $s(n'-1) > d \cdot D$, which forces every
+          $H \in K_\tau$ to vanish at a clean hold-out;
+    \item \emph{Kernel:} $(n'-1)\binom{k'+s-1}{s-1} < \binom{k'+d-1}{d}$,
+          which guarantees the interpolation kernel is nonzero on random input.
+\end{enumerate}
+Among feasible pairs $(s,d)$, we prefer smaller $d$: the GIJS matrix has
+$\binom{k'+d-1}{d}$ columns, so $d$ dominates the per-run cost. Subject to
+that constraint, we prefer a larger relative margin on the kernel inequality,
+since a
+near-tight kernel is numerically fragile.
+
+There is a tension in choosing $n'$ itself. A smaller $k'$ (hence smaller
+$n'$) makes each GIJS run cheaper, but GIJS also needs a hard column-count
+floor: $n'$ must be large enough that the reconstruction inequality can hold
+at all. In practice $n'$ cannot be pushed far below the boundary where
+$s(n'-1) \approx dD$.
+
+
+\subsection{The Core of the Attack}\label{sec:fullattack}
+Let $t'$ denote the number
+of noisy columns among the $n'-1$ interpolation columns (all columns except the
+holdout column) at any given point in the following algorithm.
+
+\paragraph{Dirty column tolerance.}
+We define $t'_{\max}$ to be the maximum number of noisy columns such that PIR
+persistence (see Section~\ref{sec:gijs}) guarantees acceptance on a clean
+hold-out:
+\begin{equation}\label{eq:tmax}
+    t'_{\max} = \max\{t' : s\cdot((n'-1) - t') > d\cdot D\}.
+\end{equation}
+A trial is \emph{recorded} --- its flagged set contributes to the
+frequency table --- iff $|V| \leq T_{\mathrm{reject}} := t'_{\max}$.
+
+We deliberately obfuscate an inner step, namely the computation of the set of 
+holdout columns $\tau$ on which the GIJS subroutine outputs random. 
+While this can be trivially computed by separately running the GIJS subroutine 
+as a black box on each holdout column, we have a quicker method, described in 
+Section~\ref{sec:reuse-attack}.
+
+\medskip
+
+\begin{algorithm}[H]
+    \caption{Phase 1}
+    \label{alg:main_analysis}
+    \KwIn{Original code parameters $n, w, k, k', q$; raw trial count
+        $T$; recording threshold $T_{\mathrm{reject}}$}
+    \KwOut{All $w$ pairs $(c_1, c_2)$ of noisy columns in the original code}
+
+    $W \leftarrow \emptyset$\;
+    \For{$iter \leftarrow 1$ \KwTo $T$}{
+        Choose a random subset $\mathcal{L} \subset [1,n+w]$ where
+        $\vert{}\mathcal{L}\vert{} = k - k'$\;
+        Compute the $k' \times n'$ shortened code by shortening at
+        $\mathcal{L}$\;
+        $V \leftarrow \emptyset$\;
+        Compute $V$ as the set of holdout columns $\tau \in \{1, \dots n'\}$ on which 
+        the GIJS subroutine outputs ``random.'' (see Algorithm~\ref{alg:reuse})\\
+        $W \leftarrow W \cup \{V\}$\;
+        
+    }
+    Use $W$ to compute all $w$ pairs of noisy columns (see Algorithm~\ref{alg:cluster})\\
+    \Return $w$ twin pairs $(c_1, c_2)$
+\end{algorithm}
+
+\subsection{Reuse Speedup}\label{sec:reuse-attack}
+We can speed up the attack by noticing that the jet matrix for 
+each holdout attack has only small differences from the others. Consider a specific shortening. In the language of the GIJS attack 
+we have one shortened point set
+$y_1,\dots,y_{n'} \in \Fq^{k'}$. For a hold-out $\tau$, the GIJS
+decision is computed from the jet matrix $M_\tau$: its rows are
+indexed by $(j,\mathbf{a})$ with $j\neq \tau$ and
+$\mathbf{a}\in A_{<s,k'}$, its columns by the monomials
+$\mathbf{X}^{\mathbf{m}}$ of degree $d$, and its entry is the Hasse
+derivative $(\partial^{[\mathbf{a}]}\mathbf{X}^{\mathbf{m}})(y_j)$.
+Writing $z$ for the coefficient vector of $H\in V_d$, we have that $(M_\tau
+z)_{(j,\mathbf{a})} = (\partial^{[\mathbf{a}]}H)(y_j)$, so
+$\ker M_\tau$ is the interpolation kernel $K_\tau$. Let $\mathbf{v}_\tau
+\in \Fq^{N_d}$ be the evaluation vector
+$\mathbf{v}_\tau = (y_\tau^{\mathbf{m}})_{\mathbf{m}}$ at which the GIJS 
+distinguisher is executed.
+
+Now, let $M_{\mathrm{full}}$ be the jet matrix of \emph{all} $n'$ points,
+with $E_F := n'J$ rows grouped in $n'$ consecutive blocks of $J$ rows
+(block $j$ holds the jets at $y_j$, with $\mathbf{a}=\mathbf{0}$
+first). Note that $M_\tau$ is $M_{\mathrm{full}}$ with block $\tau$
+deleted, and that $\mathbf{v}_\tau$ is exactly the
+$(\tau,\mathbf{0})$-row of $M_{\mathrm{full}}$, since
+$(\partial^{[\mathbf{0}]}\mathbf{X}^{\mathbf{m}})(y_\tau) =
+y_\tau^{\mathbf{m}}$.
+
+Call a vector $\mathbf{s} = M_{\mathrm{full}} z$ a \emph{syndrome}. As
+$z$ ranges over $\Fq^{N_d}$, the syndromes range over the column
+space of $M_{\mathrm{full}}$, which is the kernel of any matrix
+$\Pperp$ whose rows form a basis of the \emph{left} kernel of
+$M_{\mathrm{full}}$ (the row relations $\mathbf{u}^{T} M_{\mathrm{full}} =
+0$). Write $h := E_F - \rk(M_{\mathrm{full}})$ for the number of such
+basis rows.
+
+\begin{theorem}[Exactness of hold-out reuse]\label{thm:reuse-exact}
+For every $\tau\in[n']$, the following are equivalent:
+\begin{enumerate}
+\item[(i)] the per-hold-out GIJS decision flags $\tau$;
+\item[(ii)] there is a syndrome $\mathbf{s} = M_{\mathrm{full}} z$
+supported only on block $\tau$ with $s_{(\tau,\mathbf{0})} \neq 0$;
+\item[(iii)] $\rk(\Pperp|_\tau) = \rk(\Pperp|_\tau^{-\mathbf{0}})$,
+where $\Pperp|_\tau$ is $\Pperp$ restricted to the $J$ columns of
+block $\tau$ and $\Pperp|_\tau^{-\mathbf{0}}$ is the same restriction
+with the $\mathbf{a}=\mathbf{0}$ column removed. If $\Pperp$ is empty
+($h=0$), then \textup{(iii)} is declared to hold for every $\tau$.
+\end{enumerate}
+Hence all $n'$ decisions of a trial are obtained from one left-kernel
+basis $\Pperp$ and two rank computations per hold-out.
+\end{theorem}
+
+\begin{proof}
+(i)$\iff$(ii): $\tau$ is flagged iff there is $z\in\ker M_\tau$ with
+$\langle z,\mathbf{v}_\tau\rangle \neq 0$. For such a $z$, the
+syndrome $\mathbf{s} = M_{\mathrm{full}}z$ vanishes outside block
+$\tau$ (that is $M_\tau z = 0$) and
+$s_{(\tau,\mathbf{0})} = \langle z, \mathbf{v}_\tau\rangle \neq 0$.
+Conversely, if $\mathbf{s} = M_{\mathrm{full}} z$ is supported on
+block $\tau$ with $s_{(\tau,\mathbf{0})}\neq 0$, then $M_\tau z = 0$
+and $\langle z,\mathbf{v}_\tau\rangle = s_{(\tau,\mathbf{0})} \neq 0$.
+
+(ii)$\iff$(iii): the syndromes supported on block $\tau$ are exactly
+the vectors $\mathbf{u}\in\Fq^{J}$ with $\Pperp|_\tau \mathbf{u} = 0$,
+i.e.\ $\ker(\Pperp|_\tau)$, embedded in block $\tau$: indeed
+$\mathbf{s}\in\ker\Pperp$ iff $\mathbf{s} = M_{\mathrm{full}} z$ for
+some $z$. Such a pattern with $u_{\mathbf{0}} \neq 0$ exists iff the
+first column of $\Pperp|_\tau$ lies in the span of the remaining
+columns: if $\mathbf{u}\in\ker(\Pperp|_\tau)$ has
+$u_{\mathbf{0}}\neq 0$, then $\mathrm{col}_{\mathbf{0}} =
+-\sum_{i\geq 1} (u_i/u_{\mathbf{0}})\,\mathrm{col}_i$; if
+$\mathrm{col}_{\mathbf{0}} = \sum_{i\geq 1} w_i\,\mathrm{col}_i$,
+then $(1,-w_1,\dots)\in\ker(\Pperp|_\tau)$ has nonzero first entry.
+And $\mathrm{col}_{\mathbf{0}}$ lies in the span of the others iff
+removing it does not drop the rank, which is (iii). If $h=0$, then
+$M_{\mathrm{full}}$ has full row rank, $\ker\Pperp = \Fq^{E_F}$, the
+pattern $\mathbf{e}_{\mathbf{0}}$ is achievable on block $\tau$, and
+(ii) holds for every $\tau$ directly.
+\end{proof}
+
+Algorithm~\ref{alg:reuse} turns Theorem~\ref{thm:reuse-exact} into a three phase
+procedure. In the first
+phase it assembles the single matrix $M_{\mathrm{full}}$.
+Next, it extracts \emph{every} linear relation
+among the rows of $M_{\mathrm{full}}$, in one pass. Forward
+elimination is run on the augmented matrix
+$[M_{\mathrm{full}} \mid I_{E_F}]$. The identity block
+is used as a ledger to record combinations
+of the original rows formed by forward elimination. Whenever a row of the
+left block has been reduced to zero, the ledger row opposite it is
+therefore an explicit combination of the rows of
+$M_{\mathrm{full}}$ that cancels them.
+Collecting all such ledger rows gives the basis $\Pperp$ of the left
+kernel. This elimination step has a cost comparable
+to one per-hold-out GIJS run. The third
+phase, the loop over $\tau$, merely reads $\Pperp$ locally, one block
+at a time.
+
+\begin{algorithm}[H]
+\caption{Hold-out reuse: all GIJS decisions of one trial}
+\label{alg:reuse}
+\KwIn{Shortened columns $y_1,\dots,y_{n'}\in\Fq^{k'}$; GIJS
+parameters $(s,d)$.}
+\KwOut{The set $V\subseteq[n']$ of flagged hold-outs, identical to
+$n'$ separate GIJS runs.}
+Build $M_{\mathrm{full}}$ ($E_F \times N_d$), rows grouped in blocks
+of $J$, $\mathbf{a}=\mathbf{0}$ first in each block\;
+Forward-eliminate the augmented matrix $[M_{\mathrm{full}} \mid
+I_{E_F}]$; let $\Pperp$ be the rows of the accumulated transform
+opposite the zero rows of the echelon form\;
+\If{$h = 0$}{\Return $V = [n']$\;}
+$F \leftarrow \emptyset$\;
+\For{$\tau \leftarrow 1$ \KwTo $n'$}{
+    $A \leftarrow \Pperp$ restricted to the $J$ columns of block
+    $\tau$\;
+    \If{$\rk(A) = \rk(A \text{ without its first column})$}{
+        $V \leftarrow V \cup \{\tau\}$\;
+    }
+}
+\Return $V$\;
+\end{algorithm}
+\smallskip
+Restricting $\Pperp$ to the
+$J$ columns of block $\tau$ discards everything a relation says
+about the other points and keeps only its entries on $\tau$'s own
+rows. According to Theorem~\ref{thm:reuse-exact}, $\tau$ is flagged by the GIJS distinguisher
+as random if and only if
+the first of these $J$ columns is already a linear
+combination of the remaining $J-1$. 
+As a result, computing the rank of the matrix of the full $J$ columns and comparing it to 
+the rank of the last $J-1$ columns is sufficient; the rank drops if the distinguisher outputs GRS
+while it stays the same if it outputs random.
+
+The early exit for
+$h = 0$ is a degenerate case: with no
+row relations at all, every syndrome is achievable and thus every hold-out
+is flagged as random.
+
+\input{cluster}
+

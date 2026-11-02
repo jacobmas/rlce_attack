@@ -1,0 +1,83 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{geometry}
+
+\usepackage[ruled,vlined,norelsize]{algorithm2e}
+\usepackage{xcolor}
+\newcommand{\abs}[1]{\lvert#1\rvert}
+\newcommand{\Fq}{\mathbb{F}_q}
+\newcommand{\Pperp}{P^{\perp}}
+\newcommand{\rk}{\operatorname{rank}}
+\newcommand{\GRS}{\mathrm{GRS}}
+
+\geometry{margin=1in}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{proposition}{Proposition}
+\newtheorem{corollary}{Corollary}
+\newtheorem{conjecture}{Conjecture}
+\newtheorem{heuristic}{Heuristic}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}
+
+\title{Key Recovery Against RLCE via the GIJS Distinguisher}
+\author{Jacob Alperin-Sheriff\thanks{The author was a member of the NIST PQC
+    standardization team during Round 1 and participated in the evaluation of
+    RLCE.}\\{\small Independent Researcher}\\{\small
+\texttt{jacobmas@gmail.com}}}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\input{abstract}
+
+\input{intro}
+
+\input{prelims}
+
+
+
+
+\input{phase1}
+
+\input{gijs}
+
+
+% \input{puncture}
+
+
+
+% \input{cluster}
+
+
+
+\input{phase2}
+
+\input{totalcosts}
+
+
+
+% \input{stretchedparams}
+
+\bibliographystyle{alpha}
+\bibliography{references}
+
+\section*{AI Usage Statement}
+Muse AI (Meta) was used in the preparation of this paper for proofs,
+calculations, and writing, and the creation of the faster non-trivial Phase 2 as well as, with careful 
+guidance from the author, the reuse idea to speed up Phase 1. 
+
+The other key ideas and insights, including that
+the Ghoshal--Ishai--Jain--Sun distinguisher can tolerate  noisy rows, the shortening and 
+counting appearances of twin pairs idea for twin pair recovery are the author's.
+
+The author takes full responsibility for the
+contents.
+
+\end{document}

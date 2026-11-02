@@ -1,0 +1,11 @@
+nprime=366 s=2 d=3 trials=41 seed=1042 y_margin=0 engine=reuse
+phase1_mode=cluster
+n_trials_used=41
+trials_source=auto
+# cluster planning chain (see cluster::plan_cluster_trials):
+=== Phase 1 (cluster) trial planning (eps = 0.01) ===
+params: N=790 w=160 n'=366
+[1] p_unhit = n'(n'-1)/(N(N-1)) = 0.214324 (2^-2.22); per-trial pattern-collision prob p^2 + (1-p)^2 = 0.663222
+[2] T_sep = 35 (smallest T with C(w,2) * collision^T <= 0.01; separates all 160 pairs)
+[3] T_vis = 41 (smallest T with w * (1-p)^T <= 0.01; no pair invisible)
+[4] T = max(T_sep, T_vis) = 41 trials (ALL trials used; no |V| filter, no t'_max gate)

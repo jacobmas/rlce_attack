@@ -1,0 +1,265 @@
+\section{Preliminaries}
+
+\begin{definition}[Generalized Reed--Solomon code]
+    Let $q$ be a prime power, $n \leq q$, $1 \leq k \leq n$. Choose distinct
+    $x_1,\dots,x_n \in \mathbb{F}_q$ (evaluation points) and nonzero
+    $y_1,\dots,y_n
+        \in \mathbb{F}_q^*$ (column multipliers). The \emph{generalized
+        Reed--Solomon
+        code} $\mathrm{GRS}_{n,k}(x,y)$ is the $[n,k]$ linear code with
+    generator
+    matrix
+    \[
+        (G_{\mathrm{GRS}})_{i,j} = y_j x_j^i, \qquad i = 0,\dots,k-1,\; j =
+        1,\dots,n,
+    \]
+    i.e., the evaluation of all polynomials of degree $< k$ at the $x_j$,
+    scaled by
+    $y_j$. GRS codes are MDS: minimum distance $d = n-k+1$.
+    See~\cite[Ch.~10]{MS77}
+    or~\cite[Ch.~5]{HP03}.
+\end{definition}
+
+\begin{definition}[Shortening]
+    Let $C$ be an $[n,k]$ code and $L \subset \{1,\dots,n\}$. The
+    \emph{shortening}
+    of $C$ at $L$, denoted $C_L$ or $\mathcal{S}_L(C)$, is obtained by
+    restricting to
+    codewords that vanish on $L$, then deleting those positions. If the
+    generator
+    columns at $L$ are linearly independent, $\dim C_L = k - |L|$ and the
+    length is
+    $n - |L|$.
+\end{definition}
+
+\subsection{The RLCE scheme}
+
+We use the $S \cdot G_s \cdot P_1 \cdot A \cdot P_2$ formulation from the RLCE
+specification~\cite{Wan16,RLCE-spec}. Everything happens over the finite field $\Fq$ for 
+$q=2^m$. 
+
+Let $G_s$ be a $k \times n$ GRS generator
+matrix. Key generation:
+\begin{itemize}
+    \item $S$: uniform random $k \times k$ invertible matrix (scrambler).
+    \item $P_1$: uniform random $n \times n$ permutation matrix.
+    \item $A$: $n \times (n+w)$ \emph{expansion} matrix. For $w$ designated
+          positions $j_1,\dots,j_w$, column $j_t$ of $G_s P_1$ is replaced by
+          two columns
+          \[
+              a_t g_{j_t} + c_t r_t, \qquad b_t g_{j_t} + d_t r_t,
+          \]
+          where $r_t \in \mathbb{F}_q^k$ is uniform random and
+          $\bigl(\begin{smallmatrix}a_t&b_t\\c_t&d_t\end{smallmatrix}\bigr) \in
+              \mathrm{GL}_2(\mathbb{F}_q)$ is uniform random. All other columns
+          pass through
+          unchanged. The pairs $(a_t g_{j_t} + c_t r_t,\; b_t g_{j_t} + d_t
+              r_t)$ are the
+          \emph{twin pairs}.
+    \item $P_2$: uniform random $(n+w) \times (n+w)$ permutation matrix.
+\end{itemize}
+The public key is $G_{\mathrm{pub}} = S \cdot G_s \cdot P_1 \cdot A \cdot P_2$,
+a $k \times (n+w)$ matrix. The secret key is $(S, G_s, P_1, A, P_2)$.
+Encryption is $c = m G_{\mathrm{pub}} + e$ with $\mathrm{wt}(e) \leq t$;
+decryption unpermutes by $P_2^{-1}$, unmixes each twin pair via the $2 \times
+    2$ inverse, unpermutes by $P_1^{-1}$, and decodes the GRS code. Security of
+the post-CLT paper updated version
+relies
+on the indistinguishability of $G_{\mathrm{pub}}$ from random solely at $w =
+    n-k$; for a more precise statement of
+security, consult the specification.
+
+
+For completeness, we reproduce the specification's parameter sets below.
+
+\begin{table}[htbp]
+\centering
+\footnotesize
+\begin{tabular}{lccccc}
+\toprule
+Set &  n & k & t & w & m \\
+\midrule
+ID-0 & 630 & 470 & 80 & 160 & 10 \\
+ID-1 & 1000 & 764 & 118 & 236 & 10 \\
+ID-2 & 1360 & 800 & 280 & 560 & 11 \\
+\bottomrule
+\end{tabular}
+\caption{Parameter sets from the RLCE specification}
+\label{tab:spec-params}
+\end{table}
+\subsection{The CLT Attack}
+
+We work with $G_{\mathrm{GRS}}$ in canonical form as above. The RLCE public key
+has $N = n + w$ columns: $n - w$ pure GRS columns and $w$ twin pairs, each
+$(c_i, c_{\tau(i)})$ of the form
+\[
+    c_i = a G_j + c R, \qquad c_{\tau(i)} = b G_j + d R,
+\]
+with $G_j$ a GRS column, $R \in \mathbb{F}_q^k$ random, and
+$\bigl(\begin{smallmatrix}a&b\\c&d\end{smallmatrix}\bigr)$ invertible, all
+permuted by secret $\pi$.
+
+Shortening at $L$ deletes those positions after restricting to codewords
+vanishing there. By~\cite[Lemma~24]{CLT18}, shortening at one twin-pair member
+\emph{derandomizes} the other. If $L$ hits every pair, $C_L = M \cdot
+    G'_{\mathrm{GRS}}$ with $M$ generic $k' \times k_{\mathrm{GRS}}$, $k' = k -
+    |L|$. If $L$ misses $j$ pairs, those $2j$ columns remain mixed (noisy).
+
+The ambient GRS dimension is $k_{\mathrm{GRS}} = k' + w - j$ for $j$ unhit
+pairs.
+
+\paragraph{High-level overview.} The Couvreur--Lequesne--Tillich
+attack~\cite{CLT18} proceeds in three phases. First, \emph{distinguish}: the
+Schur square $C^{\star 2}$ has abnormally low dimension when the gap $c = (n-k)
+    - w$ exceeds $(3+\sqrt{16w+1})/2$, revealing twin-pair positions. Second,
+\emph{unmix}: for each identified pair, the $2 \times 2$ mixing is inverted to
+recover pure GRS columns. Third, \emph{recover}:
+Sidelnikov--Shestakov~\cite{sidelnikov1992insecurity} on the
+reconstructed GRS code yields the secret support and multipliers. The attack
+\emph{succeeds} for $w$ sufficiently below $n-k$ but \emph{fails} at the
+shipped $w = n-k$ boundary, where the square is provably full and no
+distinguisher was known.
+
+\subsection{Hasse Derivatives, Multiplicity Codes, and Jets}\label{sec:hasse}
+
+We follow the treatment of~\cite{GIJS26}. For $\mathbf{a} = (a_1,\dots,a_{k'})
+    \in \mathbb{Z}_{\geq 0}^{k'}$ write $|\mathbf{a}| = \sum_i a_i$ for its
+$\ell_1$-norm, and let
+\[
+    A_{<s,k'} := \{\mathbf{a} \in \mathbb{Z}_{\geq 0}^{k'} : |\mathbf{a}| < s\}
+\]
+be the set of multi-indices of order below $s$.  We write
+$\mathbf{X}^{\mathbf{a}} := \prod_i X_i^{a_i}$ for the corresponding monomial.
+
+\begin{definition}[Hasse derivatives~{\cite[Def.~2.7]{GIJS26}}]
+    Let $F \in \mathbb{F}[X_1,\dots,X_{k'}]$ over a field $\mathbb{F}$.  The
+    \emph{Hasse derivative} of $F$ with respect to
+    $\mathbf{a} \in \mathbb{Z}_{\geq 0}^{k'}$ is
+    \[
+        \partial^{[\mathbf{a}]} F
+        = \sum_{\mathbf{b} \geq \mathbf{a}}
+        \binom{\mathbf{b}}{\mathbf{a}} \cdot \mathrm{Coeff}_{\mathbf{b}}(F)\,
+        \mathbf{X}^{\mathbf{b}-\mathbf{a}},
+    \]
+    where $\mathrm{Coeff}_{\mathbf{b}}(F)$ is the coefficient of
+    $\mathbf{X}^{\mathbf{b}}$ in $F$ and
+    $\binom{\mathbf{b}}{\mathbf{a}} = \prod_i \binom{b_i}{a_i}$.  Equivalently,
+    Hasse derivatives are the finite-field analogue of ordinary partial
+    derivatives, characterized by the formal Taylor expansion
+    \[
+        F(\mathbf{X}+\mathbf{Z})
+        = \sum_{\mathbf{a}} (\partial^{[\mathbf{a}]}
+        F)(\mathbf{X})\,\mathbf{Z}^{\mathbf{a}}.
+    \]
+    For a univariate polynomial $f(Z) = \sum_{j=0}^{d} c_j Z^j$ we write
+    $\partial^{[r]} f(Z) = \sum_{j=r}^{d} \binom{j}{r} c_j Z^{j-r}$; in
+    characteristic $0$ this equals $f^{(r)}(Z)/r!$.  The Hasse-derivative chain
+    rule holds in any characteristic, which is what makes multiplicities usable
+    over finite fields.
+\end{definition}
+
+\begin{definition}[Hasse jet~{\cite[Def.~2.9]{GIJS26}}]
+    For $\mathbf{x} \in \mathbb{F}_q^{k'}$ and $s \geq 1$, the \emph{Hasse jet
+        of
+        order $<s$} of $F$ at $\mathbf{x}$ (also the \emph{order-$s$
+        evaluation} of
+    $F$ at $\mathbf{x}$) is the vector of all Hasse derivatives of order below
+    $s$ evaluated at $\mathbf{x}$:
+    \[
+        J_{\mathbf{x}}^{<s}(F) := \bigl((\partial^{[\mathbf{a}]}
+        F)(\mathbf{x})\bigr)_{\mathbf{a} \in A_{<s,k'}}.
+    \]
+    We say $F$ \emph{vanishes with multiplicity} (at least) $s$ at $\mathbf{x}$
+    if $J_{\mathbf{x}}^{<s}(F) = 0$.
+\end{definition}
+
+\begin{definition}[Multiplicity code~{\cite[Def.~2.10]{GIJS26},
+    \cite{DBLP:journals/jacm/KoppartySY14}}]
+    The multiplicity code of order-$s$ evaluations of polynomials of total
+    degree
+    at most $d$ in $k'$ variables over $\mathbb{F}_q$ has length $q^{k'}$ over
+    the
+    alphabet $\Sigma = \mathbb{F}_q^{\binom{k'+s-1}{s-1}}$, indexed by
+    $\mathbf{x} \in \mathbb{F}_q^{k'}$, with codeword
+    $\mathrm{Encode}_{s,d,k',q}(F) = (J_{\mathbf{x}}^{<s}(F))_{\mathbf{x} \in
+        \mathbb{F}_q^{k'}}$ for each $F$ of total degree at most $d$.
+\end{definition}
+
+The key analytic fact is Hermite interpolation: over any field, a univariate
+polynomial of degree at most $d$ is determined by its order-$<s$ Hasse jets at
+enough points.
+
+\begin{lemma}[Hermite interpolation of Hasse
+    derivatives~{\cite[Lem.~2.8]{GIJS26}}]
+    Let $f$ be a univariate polynomial of degree at most $d$ over a finite
+    field
+    $\mathbb{F}$, let $\alpha_1,\dots,\alpha_h$ be distinct elements of
+    $\mathbb{F}$, and let $\mu_1,\dots,\mu_h$ be positive integers with
+    $\sum_i \mu_i > d$.  Then $f$ is recovered in
+    $\mathrm{poly}(d,h,\log |\mathbb{F}|)$ time from the values
+    $(\partial^{[j]} f)(\alpha_i)$ for $i \in [h]$, $0 \leq j < \mu_i$.
+\end{lemma}
+
+\paragraph{Use in the GIJS distinguisher.}
+Let $Y = [\mathbf{y}_1 \mid \cdots \mid \mathbf{y}_{n'}] \in
+    \mathbb{F}_q^{k' \times n'}$ be the input matrix and fix a hold-out column
+$\tau$.  The distinguisher computes the kernel
+\[
+    K_\tau := \Bigl\{H \in \mathcal{H}_{k',d} :
+    J_{\mathbf{y}_j}^{<s}(H) = 0 \text{ for all } j \neq \tau\Bigr\},
+\]
+where $\mathcal{H}_{k',d}$ is the space of \emph{homogeneous} degree-$d$
+polynomials in $k'$ variables, of dimension $\binom{k'+d-1}{d}$.  It outputs
+``GRS'' iff every $H \in K_\tau$ vanishes at $\mathbf{y}_\tau$.  Restricting
+to homogeneous polynomials kills the unknown GRS column multipliers: for
+homogeneous $H$ of degree $d$,
+\[
+    (\partial^{[\mathbf{a}]} H)(\lambda \mathbf{x})
+    = \lambda^{d - |\mathbf{a}|} \cdot (\partial^{[\mathbf{a}]} H)(\mathbf{x})
+    \qquad (\lambda \neq 0),
+\]
+so $J_{\lambda \mathbf{x}}^{<s}(H) = 0 \iff J_{\mathbf{x}}^{<s}(H) = 0$
+\cite[Lem.~3.1]{GIJS26}.  The two feasibility conditions are the
+\emph{reconstruction} inequality $s(n'-1) > dD$, which forces every
+$H \in K_\tau$ to vanish at a clean hold-out via Hermite interpolation along
+the hidden degree-$D$ curve, and the \emph{kernel} inequality
+$(n'-1)\binom{k'+s-1}{s-1} < \binom{k'+d-1}{d}$, which guarantees
+$K_\tau \neq \{0\}$ on a random input so that Schwartz--Zippel applies.
+
+
+\subsection{The GIJS distinguisher}\label{sec:gijs-dist}
+
+
+The Ghoshal--Ishai--Jain--Sun~\cite{GIJS26} distinguisher tests whether a given matrix spans
+a subcode of a generalized Reed--Solomon code. Given $n'$ columns in
+$\mathbb{F}_q^{k'}$, it interpolates: it seeks a nonzero homogeneous degree-$d$
+polynomial vanishing to order $s$ at $n'-1$ of the columns (the interpolation
+set), then checks whether it also vanishes at the remaining hold-out column.
+For a true GRS subcode, the hidden rational-curve structure forces this
+vanishing; for random columns, Schwartz--Zippel says it fails with high
+probability. The two inequalities below encode feasibility: the first ensures
+enough interpolation constraints to force vanishing on the curve, the second
+that the interpolation kernel is nonzero.
+
+\begin{theorem}[Ghoshal et al., Theorem~3.2]\label{thm:ghoshal}
+    Let $n' \leq q$, $k' \leq K$, $d < q$, $D := K-1$. If
+    \begin{align}
+        s(n'-1)                   & > d\cdot D \label{eq:ghoshal1}          \\
+        (n'-1)\binom{k'+s-1}{s-1} & < \binom{k'+d-1}{d} \label{eq:ghoshal2}
+    \end{align}
+    then there is a $\mathrm{poly}\!\left(\binom{k'+d-1}{d}, n', \log
+        q\right)$-time
+    algorithm distinguishing a random $k'$-dimensional subcode of random
+    $GRS_{n',K}$
+    from uniform random, with gap $\geq 1 - d/q$.
+\end{theorem}
+The algorithm (Algorithm~1 of~\cite{GIJS26}): hold out an arbitrary column
+$\tau$, compute
+the kernel $K_\tau$ of Hasse-jet evaluations (order $< s$) at the other $n'-1$
+columns in the space of homogeneous degree-$d$ polynomials, and output ``GRS''
+iff every $H \in K_\tau$ vanishes at $y_\tau$, ``Random'' otherwise.
+
+\paragraph{Variables.} $k'$ is the dimension of the subcode; $K$ the
+hidden ambient GRS dimension ($k' + w$ here); $s$ the jet multiplicity; $d$ the
+test-polynomial degree. The first inequality is \emph{reconstruction}; the
+second the \emph{kernel} condition.

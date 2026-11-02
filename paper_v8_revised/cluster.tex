@@ -1,0 +1,136 @@
+\subsection{Unmixing Pairs Via Clustering}\label{sec:cluster}
+We now show how to take flagged sets of columns from the tria runs and recover
+pairs. Here, the flagged sets of columns mean the set $W$
+to which sets of columns flagged as ``random" were added in
+Algorithm~\ref{alg:main_analysis}
+after each good trial.
+
+The idea is simple once the flagged set of a single trial is looked
+at the right way. In a trial shortening, a twin pair can be in only three
+states. If both members are kept, then both are dirty columns, so
+both are flagged with very very high probability.
+If exactly one member is kept, and then the survivor
+is derandomized to a clean column per the analysis of the Couvrier et al
+paper~\cite{CLT18},
+so that column is not flagged, and the
+other member is absent from the trial altogether. The final case is where both
+members
+are hit by the shortening, and neither appears. In all three cases
+it is with very very high probability the case that either both are flagged or neither
+are flageed.
+
+Finally, a column that belongs to no twin pair, (a pure GRS column), is never
+flagged at all.
+
+As a result, if both members of a pair are correctly flagged with high enough
+probability,
+then the list of trials in
+which column A was flagged  is the same as the list of columns for which its
+twin column B was flagged.
+Meanwhile, it is an empty list for a pure column, and for other twin pairs, the
+list is non-empty but with
+high probability over the random choices of shortenings distinct. Pair
+identification thus becomes grouping
+columns by their \emph{pattern}.
+
+\subsubsection{The algorithm}
+
+For each original public column $i$, record its pattern
+$b_i \in \{0, 1\}^T$, where $b_i(t) = 1$ if $i$ was flagged in
+trial $t$ and $0$ otherwise. Then proceed as follows.
+
+\begin{algorithm}[H]
+    \caption{Flag-pattern clustering}
+    \label{alg:cluster}
+    \KwIn{Flagged sets $V_{1}, \dots, V_{T}$ of $T$ trials,
+        mapped back
+        to original public-column indices}
+    \KwOut{Sets of twin pairs and pure columns; anomalies, if any}
+    For each column $i$, form its pattern $b_i$, with $b_i(t) = 1$
+    iff $i \in V_t$\;
+    Group columns by \emph{exact equality} of patterns\;
+    A group of size $2$ with a nonzero pattern is a twin pair\;
+    The group with the all-zero pattern is the pure columns\;
+    A group of size $1$ with a nonzero pattern is an orphan\;
+    A group of size $3$ or more is oversized, and is reported, not
+    paired\;
+    Compare the size of the all-zero group with the expected
+    number $n - w$ of pure columns, and report any excess\;
+\end{algorithm}
+
+
+
+\subsubsection{Trials for Success}\label{sec:cluster-planning}
+
+We now compute how many trials (assuming that pairs are with overwhelming probability correctly flagged together) 
+are necessary to identify and unmix pairs with high probability. Fix a pair. 
+The probability both columns of the pair appear in the shortening is \[
+    p \;=\; \frac{(n')(n'-1)}{(n+w)(n+w-1)},
+\]
+the probability that a given pair survives a random shortening to
+$n'$ out of $N$ columns. Two distinct pairs separate in a recorded trial
+except with probability at
+most $p^2 + (1 - p)^2$, when either both pairs appear in the shortening, or neither pair appears in the shortening.
+
+
+Note that we heuristically treat the pairs as independent here. A union bound over the $\binom{w}{2}$ pairs of
+pairs then says that $T$ trials separate every pair from every
+other pair with failure probability at most $\epsilon$ as soon as
+\[
+    \binom{w}{2} \bigl(p^2 + (1 - p)^2\bigr)^T \;\leq\; \epsilon,
+\]
+
+and we take $T_{\mathrm{sep}}$ to be the smallest such $T$. A pair
+is invisible, and so hides in the pure set, if it is never unhit
+in $T$ trials, which happens with probability $(1 - p)^T$ per pair;
+a union bound over the $w$ pairs gives the visibility requirement
+\[
+    w (1 - p)^T \;\leq\; 0.01,
+\]
+with $T_{\mathrm{vis}}$ the smallest such $T$. Clustering runs $
+    T \;=\; \max(T_{\mathrm{sep}}, T_{\mathrm{vis}})
+$.
+
+\subsubsection{Empirical Validation}\label{sec:cluster-validation}
+
+Clustering was validated at several points, where the truth
+was known from the key and every trial could be checked against
+it. 
+
+These parameters include the actual ID-0 parameters. 
+
+\begin{table}[htbp]
+    \centering
+    \footnotesize
+    \begin{tabular}{lcccc}
+        \toprule
+        Scheme Parameters ($q, n, k, w$) & Attack Parameters ($n',(s,d)$)  & Trials & Flagging exact & Pairs recovered \\
+        \midrule
+        $(256, 198, 165, 33)$, $(90, 2, 3)$           & $23/23$        & $33/33$    \\
+        $(256, 119, 79, 31)$, $(101, 2, 3)$  & $25/25$        & $31/31$   \\
+        $(1024, 630, 470, 160)$, $(366, 2, 3)$ & $41/41$ & $160/160$ \\ 
+        \bottomrule
+    \end{tabular}
+    \caption{Cluster validation at reduced parameters. ``Flagging
+        exact'' means the flagged set equalled the unhit pairs' columns
+        in that many trials.}
+    \label{tab:cluster-validation}
+\end{table}
+
+
+\paragraph{ID-0, end to end.} The shipped ID-0 set has since been
+run end to end with cluster Phase~1, on a fresh key generated with
+the NIST DRBG key generation of the implementation, at the adopted
+point $(n', k', (s, d)) = (366, 46, (2, 3))$, with $41$ trials on
+$12$ threads. The run succeeded completely: cluster aggregation
+over the $41$ trials returned $160$ pairs, $470$ pure columns,
+$0$ orphans, and $0$ oversized groups; Phase~2 unmixed $160/160$
+pairs, Sidelnikov--Shestakov recovered the correct GRS code, and
+verification passed with $160/160$ non-degenerate pairs correct
+and $0$ false positives. The run took a little over $3$ hours of
+wall time across those $12$ threads to break ID-0. That is the
+Phase~1 trial time dominating the run: $41$ trials in batches of
+$12$, each trial a single reuse elimination, with aggregation,
+Phase~2 (SS bootstrap $0.25$\,s), and verification taking minutes
+by comparison. ID-1 and ID-2 have not been run end to end with
+cluster Phase~1; their figures below remain model estimates.

@@ -1,0 +1,2 @@
+status=OK
+n_pairs=160 n_pure=470 n_orphans=0 n_oversized=0 n_all_zero=470 expected_pure=470 excess=0

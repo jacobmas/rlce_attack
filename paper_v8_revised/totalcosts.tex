@@ -1,0 +1,52 @@
+\section{Experimental Costs for Key Recovery}
+\label{sec:total-costs}
+
+Experiments were run on a single-socket, single-NUMA-node x86\_64 machine with
+an Intel Core Ultra 7 265H processor (family 6, model 197, stepping 2): 16
+cores and 16 hardware threads (one thread per core), with a maximum frequency
+of 5.3\,GHz, 30\,GiB of RAM and 8\,GiB of swap, a 24\,MiB shared L3 cache,
+28\,MiB of L2 cache in total, and 480\,KiB of L1 data cache and 768\,KiB of L1
+instruction cache in total.
+
+All experiments below were successful in key recovery. Code will be available on Github shortly if the 
+author gets around to it. 
+
+\subsection{Parameter Sets Tested}\label{sec:param-sets}
+
+In addition to the ID-0 (128-bit) parameter set from the RLCE specification, we
+also tested several smaller parameter sets, and present them and name them here
+to avoid cluttering the timing table below; all sets below have $w=n-k$. 
+
+
+\begin{table}[!ht]
+\caption{Parameter Sets Tested}
+\begin{center}
+\begin{tabular}{llcccc}
+\toprule
+Name        & q & n & k & $n'$\\
+\midrule
+256  & 256 & 198 & 165 & 90\\
+512  & 512 & 500 & 375 & 293\\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{table}
+
+\subsection{Timing tables}\label{sec:timing}
+
+Below, phase 1 refers to the total time taken summed across threads.
+\begin{table}[!ht]
+\caption{Timing Results}
+\begin{center}
+    \footnotesize
+    \begin{tabular}{llrrrrr}
+        \toprule
+        Set                           & Trials             & Threads & Phase~1 Time & Phase~2 Time \\
+        \midrule
+        256 & 50 & 10 & 288.27 (s) & 0.02 (s)\\
+        512 & 44 & 12 & 37278.15 (s) & 0.09 (s) \\
+        ID-0    & 41             & 12   & 109673.21 (s)        & 0.23 (s)     \\
+        \bottomrule
+    \end{tabular}
+\end{center}
+\end{table}

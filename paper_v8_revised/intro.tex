@@ -1,0 +1,155 @@
+\section{Introduction}
+
+The RLCE cryptosystem of Wang~\cite{DBLP:journals/corr/Wang15aa, RLCE-spec} was one of the
+69 schemes submitted to NIST's postquantum cryptography standardization
+process. RLCE builds its public key from a generalized Reed--Solomon code
+$GRS_{n,k}$ by injecting $w$ \emph{twin pairs}: for each pair, two GRS columns
+are mixed with two random columns via a $2 \times 2$ invertible matrix, and all
+$N = n + w$ columns are permuted. The three unbroken parameter crucially all
+have $w = n-k$, the exact boundary where the CLT square distinguisher provably
+fails.
+
+This scheme was one of many~\cite{DBLP:conf/pqcrypt/Wieschebrink09,
+      DBLP:journals/dcc/BaldiBC13, DBLP:conf/wcc/Wieschebrink16,
+      DBLP:journals/iet-it/AlmeidaBNS24, DBLP:conf/redundancy/Krouk20} attempts to
+patch Niederreiter's original attempt to instantiate the
+McEliece~\cite{McEliece1978} cryptosystem with GRS
+codes~\cite{DBLP:journals/dc/Niederreiter86}, which was itself broken by the
+Sidenikov--Shestakov attack~\cite{sidelnikov1992insecurity}. The original
+scheme and all of these other previous attempts have fallen to cryptanalysis.
+
+Due to security concerns raised by the Couvreur--Lequesne--Tillich
+(CLT)~\cite{CLT18} attack on smaller parameters, NIST did not advance RLCE to
+the second round; it appears among the schemes for which NIST ``lacked full
+confidence in security''~\cite{Moody19}. See~\cite{NIST8240} for the Round~1
+report. No subsequent public attack has been advanced against the $w = n-k$
+parameter sets since, and due to the large parameter sizes the scheme may not
+have received any attention at all in the intervening period. However, with the
+recent improvements in AI cryptanalysis ~\cite{cryptoeprint:2026/1593,
+      cryptoeprint:2026/2266} causing concerns from eminent cryptographers that key
+exchange/key encapsulation itself may be at risk ~\cite{green2026pkc}, it is
+likely important to subject even large parameter schemes to renewed
+cryptanalysis attempts in order to enable a potential broadening of
+standardized schemes for cryptographic agility as a hedge against AI
+breakthroughs against lattices, isogenies or quasi-cyclic codes.
+
+There has been recent hubbub over the Ghoshal--Ishai--Jain--Sun~\cite{GIJS26}
+provable distinguisher and heuristic key recovery for the venerable and ancient
+(by cryptographic standards) McEliece scheme~\cite{McEliece1978} and subsequent
+improvement papers~\cite{cryptoeprint:2026/1984}. Most notably it has led to
+the German Federal Office for Information Security (BSI) shifting its guidance
+from wholesale approval to recommending against the use of the Classic McEliece
+scheme in new deployments~\cite{bsi2026classicmceliece}. In the course of a
+very long thread on NIST's PQC forum over exactly how devastating or not these
+attacks are, in practice, Dr. Wang commented that "I do not think these attacks
+on McEliece will work on RLCE. I still believe RLCE has sufficient randomness
+in the generator matrix and is a good alternative for McEliece
+schemes,"~\cite{wang2026pqcforum} which piqued the interest of this work's
+author.
+
+We contradict Wang's claim for \emph{both} distinguishing and key recovery by
+using the GIJS distinguisher: the distinguishing step is proved, and the
+key-recovery step is an experimentally verified cryptanalysis~\cite{GIJS26}.
+
+\subsection{The Attack}\label{sec:intro-attack}
+
+In slightly more detail, our attack proceeds as follows.
+\begin{enumerate}
+      \item \textbf{Shorten} the public key at $\ell = k - k'$ random positions,
+            for
+            some \emph{small} $k'$.
+      \item \textbf{Distinguish} using the recent
+            Ghoshal--Ishai--Jain--Sun~\cite{GIJS26}
+            distinguisher (Theorem~\ref{thm:ghoshal}), which operates beyond the
+            Schur-square barrier, applied \emph{directly} with every column as
+            hold-out.
+      \item \textbf{Group} columns across trials via co-occurrence with twin pairs.
+      \item \textbf{Recover} the original GRS columns from 3 twin pairs.
+      \item \textbf{Solve} using Sidelnikov-Shestakov.
+\end{enumerate}
+
+A key insight is that GIJS will still work even with some random columns, and
+that, furthermore, the pairs of noisy columns provide useful information to the
+GIJS distinguisher. We show in Section~\ref{sec:gijs} that the GIJS
+distinguisher for GRS subcodes should work on shortened RLCE public keys
+whenever $sC + U > dD$, where $s$ is the jet parameter, $d$ is the degree of the
+multivariate polynomials, $C$ is the number of clean (either from shortening at
+one of a twin pair's columns or from an initially clean column) columns in the
+shortened code, and $U$ is the number of twin pairs remaining in the shortened
+code.
+
+Extensive experimental testing shows that the GRS distinguisher on the
+parameter sets of interest essentially never fails to diagnose a ``clean" GRS
+column as GRS and a noisy column as ``random." This leads to practical attacks.
+
+In short, we simply choose uniformly at random columns to shorten at for a
+relatively small (less than 100 for the sets considered) number of separate
+\emph{trials}. In each trial, we run the GIJS distinguisher on the shortened
+code, with each column held out separately as the holdout column. This enables
+us to learn which columns in the shortening remain part of a twin pair (meaning
+both it and its pair column are in the shortened code) in that shortening, and
+refer to these columns as \emph{flagged}.
+
+To recover twin pairs, we observe that (assuming no errors in the
+distinguisher) a column is \emph{flagged} in a trial if and only its twin pair
+column is also \emph{flagged} in that trial. This fact means that after a
+relatively small number of randomized trials, for a given column A, there will
+be only other column B that is flagged in and only in trials in which column A
+is flagged, and that this column B is the twin pair for column A.
+
+After recovering all twin pairs, we use some clever ideas in\ref{sec:fastp2} to
+unmix 3 of these twin pairs back into actual GRS columns. We note that a
+simpler route to do so would involve simply trying all $(q-1)^3$ non-degenerate
+linear combinations of the pairs, one of which will correctly unmix all 3.
+
+Finally, after we have recovered a $k \times (k+3)$ pure GRS matrix, we are able to
+run the celebrated~\cite{sidelnikov1992insecurity} to recover the code
+structure (the scrambling matrix $S$). At this point, unmixing the remainder of the twin pairs
+becomes trivial (see~\cite{CLT18}). We end up with the full private key.
+
+\subsection{Experimental Success}\label{sec:exp-success}
+
+We were able to run a full key recovery (see Section~\ref{sec:total-costs}) at
+the 128 bit parameters (ID-0) in the specification that took approximately 30.5
+hours of core work on a standard high-end laptop to recover the key. We have
+also given key recovery data for several other smaller parameter sets for
+comparison in the $w=n-k$ regime; see Section~\ref{sec:total-costs} for
+details.
+
+While we did not execute an experimental attack on $ID-1$ and $ID-2$ due to a
+lack of desire to spend personal funds, we estimate that a cloud based attack should be possible
+for no more than a few hundred dollars; the biggest issues, as mentioned
+in~\cite{GIJS26}, are the memory costs of the attack. However, these are easily
+solvable in the cloud for the given parameter sets.
+
+\subsection{Further Work}\label{sec:further-work}
+The scheme is completely broken in the $w=n-k$ parameter regime, as a back of the envelope 
+computation estimates that a public key would need to be in the petabytes with hundreds of megabytes per 
+ciphertext in order to reach $128$ bits of security. However, there is a natural
+defensive option; push the number of twin pairs $w$ to its maximum
+$w=n$, eliminating pure columns entirely ($N=2n$). Our attack does not work in
+this regime when $2k \geq n$, so one could potentially propose this as a patch.
+However, due to the matrix becoming wider while the error correction regime
+does not change, ISD attack perform better, necessitating a bump in $k$, and
+significantly raising parameter sizes.
+
+Below, we have calculated parameter sets that seem to be immune to the attacks
+given in this paper, as well as to ISD-based attacks. 
+
+\begin{table}[!ht]
+      \caption{Proposed $w=n$ parameter sets immune to our attack and ISD}
+      \begin{tabular}{lrrrrrrrrr}
+            \toprule
+                      & $n$  & $k$  & $t$ & $N$  & field    & Stern & pk (KB)   & ct (kB)\\
+            \midrule
+            128-fixed & 1191 & 619  & 286 & 2382 & $2^{11}$ & 140.2 & 1980    & 3.2 \\
+            192-fixed & 1774 & 922  & 426 & 3548 & $2^{11}$ & 204.0 & 4393    & 4.8 \\
+            256-fixed & 2355 & 1225 & 565 & 4710 & $2^{12}$ & 268.1 & 8452    & 6.9 \\
+            \bottomrule
+      \end{tabular}
+\end{table}
+
+We do not claim that these parameters are secure, and if forced, we would bet
+against their security given the long, long history of attacks on GRS-McEliece
+schemes and various attempts to patch. We merely give them as new targets and
+the smallest scheme parameters secure given our new attacks for future research. 

@@ -1,0 +1,15 @@
+\begin{abstract}
+    We present an experimental cryptanalysis of the RLCE
+    cryptosystem~\cite{DBLP:journals/corr/Wang15aa, RLCE-spec}
+    at the heretofore secure $w=n-k$ parameter regime.  Our attack relies
+    crucially on the  recent Ghoshal--Ishai--Jain--Sun (GIJS)
+    distinguisher~\cite{GIJS26}. The attack shortens the public key at
+    random positions, runs the GIJS distinguisher with \emph{every}
+    column as hold-out, and uses this distinguisher to identify twin pairs based on how they appear across trials.
+    Three pairs so identified are unmixed by a root-finding cascade,
+    and Sidelnikov--Shestakov on the resulting $k \times (k+3)$ pure
+    matrix recovers the key.
+
+    We experimentally verify our attack by breaking the ID-0 (128-bit) in 30.5
+    core-hours (about 3 hours of wall time) on a standard higher-end laptop.
+\end{abstract}

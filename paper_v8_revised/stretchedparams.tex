@@ -1,0 +1,164 @@
+\section{The $w=n$ Defense: ISD-Secure Parameters}\label{sec:wn-params}
+
+% Updated: the pairing step below is now clustering
+% (\S\ref{sec:cluster}) followed by Phase~2 root-finding
+% (\S\ref{sec:fastp2}), not the pair-frequency counting and
+% per-pair GIJS disentangling of the earlier version of this
+% section. The ISD table itself is unchanged; the cost table
+% at the end of this section is the old model, kept only for
+% comparison, and its replacement belongs in
+% \S\ref{sec:total-costs}, to be filled in from new runs.
+
+With $w=n$ we have $N=2n$ and error weight $t=\lfloor(n-k)/2\rfloor$ (the GRS
+decoding radius, unchanged --- decryption unmixes all $n$ pairs and decodes as
+before). The ISD work factor drops sharply versus $w=n-k$: $t$ is fixed by
+$(n-k)/2$ while $N$ grows to $2n$, so the error density $t/N$ falls.
+
+We searched rates $R=k/n\in[0.40,0.85]$ for minimal $n$ with Stern ISD
+at the target level. The Stern work factors are bit-operation counts in
+the standard model of Stern's algorithm~\cite{Stern89}: expected
+number of iterations times per-iteration cost, minimized over the
+zero-window parameters $(p, \ell)$. The optimum sits at $R\approx 0.52$ --- well below the
+spec rates ($\approx 0.75$).
+\begin{itemize}
+    \item \textbf{raw}: minimal $(n,k)$ with Stern $\geq$ target;
+    \item \textbf{cons}: Stern $\geq$ target$+15$, to account for improvements such as that of Becker et al~\cite{DBLP:conf/eurocrypt/BeckerJMM12}. 
+\end{itemize}
+The field is the smallest $\mathrm{GF}(2^m)$ with $n\leq 2^m$.
+
+\begin{center}
+    \begin{tabular}{lrrrrrrrr}
+        \toprule
+                 & $n$  & $k$  & $t$ & $N$  & field    & Stern & pk (KB) \\
+        \midrule
+        128-raw  & 1080 & 562  & 259 & 2160 & $2^{11}$ & 128.1 & 1630    \\
+        128-cons & 1218 & 632  & 293 & 2436 & $2^{11}$ & 143.1 & 2067    \\
+        192-raw  & 1665 & 865  & 400 & 3330 & $2^{11}$ & 192.1 & 3868    \\
+        192-cons & 1801 & 937  & 432 & 3602 & $2^{11}$ & 207.1 & 4532    \\
+        256-raw  & 2246 & 1168 & 539 & 4492 & $2^{12}$ & 256.0 & 7686    \\
+        256-cons & 2382 & 1238 & 572 & 4764 & $2^{12}$ & 271.0 & 8639    \\
+        \bottomrule
+    \end{tabular}
+\end{center}
+For reference, the elementary Prange iteration counts
+$\log_2\bigl(\binom{N}{k}/\binom{N-t}{k}\bigr)$ for the six sets are
+$121.3$ / $136.8$ / $187.0$ / $202.3$ / $252.2$ / $267.5$: the Stern
+figures sit $3.5$--$6.8$ bits above the bare iteration count, which
+charges nothing per iteration.
+Restoring ISD at $w=n$ costs $2.34$--$3.08\times$ in $N$ plus field bumps, for
+$3.36$--$4.56\times$ public keys versus spec.
+
+\subsection{GIJS at $w=n$ and clustering}\label{sec:wn-recovery}
+
+The single-run GIJS distinguisher (one hold-out) at these parameters, with
+$n'\leq\min(N,q)$ ($q^2$ via quadratic extension where $n$ sits close to $q$):
+\begin{center}
+    \begin{tabular}{llccc}
+        \toprule
+                 & field & best $(k',n',s,d)$ & $C_{\mathrm{run}}$ \\
+        \midrule
+        128-raw  & $q$   & (144,1742,3,4)     & $2^{72.4}$         \\
+        128-cons & $q$   & (152,1956,3,4)     & $2^{73.4}$         \\
+        192-raw  & $q^2$ & (177,2642,3,4)     & $2^{76.0}$         \\
+        192-cons & $q^2$ & (184,2849,3,4)     & $2^{76.65}$        \\
+        256-raw  & $q$   & (205,3529,3,4)     & $2^{78.5}$         \\
+        256-cons & $q$   & (211,3737,3,4)     & $2^{79.0}$         \\
+        \bottomrule
+    \end{tabular}
+\end{center}
+
+The frequency-table attack of \S\ref{sec:phase1} needs pure columns; at
+$w=n$ there are none, so that route is closed structurally. The
+earlier version of this section recovered the pairing by counting
+pair co-occurrences instead: a column is noisy in the shortened
+code iff both it and its twin were unhit, so a true pair co-occurs
+with probability $p_2 = \binom{N-2}{n'-2}/\binom{N}{n'}$, while a
+non-pair needs four columns unhit, $p_4 =
+\binom{N-4}{n'-4}/\binom{N}{n'}$, and the ratio $p_2/p_4 \approx
+(N/n')^2$ is $1.54$--$1.63$ at the parameters above. That gap is
+structural, not heuristic, but counting it out needed about $500$
+trials to separate the smallest true count from the largest false
+count with probability $0.99$ in the model.
+
+Clustering (\S\ref{sec:cluster}) does the same job with far
+fewer trials, and it is the natural tool at $w=n$, because there
+is no pure set to confuse it: every column belongs to a pair, so
+a clean clustering should return $w$ groups of size $2$ and an
+empty all-zero group, with orphans and oversized groups only as
+anomalies. The trial count is the clustering plan, not the
+frequency plan. With $p = (n')_2/(N)_2$ the probability a given
+pair survives a shortening, two distinct pairs fail to separate
+in one trial with probability at most $p^2 + (1-p)^2$, and a pair
+is invisible with probability $(1-p)^T$, so
+$T = \max(T_{\mathrm{sep}}, T_{\mathrm{vis}})$ with
+$\binom{w}{2}(p^2 + (1-p)^2)^T \le 0.01$ and
+$w(1-p)^T \le 0.01$ gives, at the six sets above:
+
+\begin{center}
+    \begin{tabular}{lrrrr}
+        \toprule
+                 & $w$  & $N$  & $n'$ & $T_{\mathrm{cluster}}$ \\
+        \midrule
+        128-raw  & 1080 & 2160 & 1742 & 30 \\
+        128-cons & 1218 & 2436 & 1956 & 30 \\
+        192-raw  & 1665 & 3330 & 2642 & 30 \\
+        192-cons & 1801 & 3602 & 2849 & 30 \\
+        256-raw  & 2246 & 4492 & 3529 & 31 \\
+        256-cons & 2382 & 4764 & 3737 & 31 \\
+        \bottomrule
+    \end{tabular}
+\end{center}
+
+That is $30$--$31$ trials, not about $500$. The same caveat
+applies as at the shipped sets: clustering rests on exact
+flagging (H5), and exact flagging at these much larger
+$(k', n')$ has not been demonstrated; the trial counts above
+are the plan \emph{if} flagging is exact, not a measured
+result.
+
+Once the pairing is known, the old per-pair disentangling ---
+trying every $\alpha \in \Fq^*$ for every pair and testing each
+candidate with GIJS over several shortenings --- is no longer
+needed, and its cost should not be added. Instead, unmix three
+pairs by the Phase~2 root-finding of \S\ref{sec:fastp2}, run
+Sidelnikov--Shestakov to recover the curve, and then unmix the
+remaining pairs directly against that curve, exactly as at the
+shipped sets. The disentangling step is therefore polynomial
+in $k$ and $N$, not a GIJS search per pair, and the cost of
+the $w=n$ attack is, to first order, the cost of the clustering
+trials themselves. What that cost is in field operations and
+in wall time at these parameters, where $(n'-1)J$ sits close
+to $N_d$ and reuse memory has not been measured, is left to
+\S\ref{sec:total-costs}; the old total below is not the new
+total.
+
+\textbf{Old full costs, kept for comparison only}
+(pair-frequency $+$ disentangling, superseded as above):
+\begin{center}
+    \begin{tabular}{lcccc}
+        \toprule
+                 & $T$ & pair-freq   & disentangle & total                \\
+        \midrule
+        128-raw  & 501 & $2^{92.2}$  & $2^{93.5}$  & $\mathbf{2^{94.0}}$  \\
+        128-cons & 501 & $2^{93.3}$  & $2^{94.6}$  & $\mathbf{2^{95.1}}$  \\
+        192-raw  & 496 & $2^{96.3}$  & $2^{97.7}$  & $\mathbf{2^{98.2}}$  \\
+        192-cons & 496 & $2^{97.1}$  & $2^{98.5}$  & $\mathbf{2^{98.9}}$  \\
+        256-raw  & 500 & $2^{99.3}$  & $2^{101.6}$ & $\mathbf{2^{101.9}}$ \\
+        256-cons & 501 & $2^{99.8}$  & $2^{102.2}$ & $\mathbf{2^{102.5}}$ \\
+        \bottomrule
+    \end{tabular}
+\end{center}
+All six fell $33$--$154$ bits below target in that old model
+(model estimates, as in Section~\ref{sec:key-cost}). The old
+total is an overestimate on two counts: it pays about $500$
+trials where clustering plans $30$--$31$, and it adds a
+per-pair GIJS disentangling cost that Phase~2 root-finding
+replaces with a polynomial step. The new total is therefore
+lower than the old total, but it is not written here, because
+the per-trial cost and memory at these $(k', n')$ have not
+been measured on the new machine; see the template in
+\S\ref{sec:total-costs}. The $w=n$ defense ---
+$3.36$--$4.56\times$
+keys to eliminate pure columns --- is futile on the mechanism
+alone: clustering recovers the pairing without any
+pure-column bootstrap, and Phase~2 finishes from three pairs.
